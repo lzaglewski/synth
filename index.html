@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Synth</title>
+    <script src="key.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+</head>
+<body>
+
+<style type="text/css">
+#monotron {
+  background-image: url('background.png');
+  background-repeat: no-repeat;
+  background-size: cover;
+
+  padding: 1.61803399rem;
+  font-family: "Source Sans Pro", Arial, sans-serif;
+  color: #eaeeef;
+  width: 750px;
+}
+
+h1, h2, h3 {
+  font-family: "Audiowide", Arial, sans-serif;
+  margin: 0;
+  font-weight: normal;
+}
+
+#brand {
+  position: relative;
+  margin-bottom: 2.61803399rem;
+  left: 3rem;
+  top: 3rem;
+}
+
+#title {
+  font-size: 1.6180339927953202rem;
+  
+  letter-spacing: 0.05em;
+}
+
+#description {
+  text-transform: uppercase;
+  font-size: 0.5rem;
+  letter-spacing: 0.1rem;
+
+}
+
+.panel{
+  position: relative;
+  top: 40px;
+  left: 4rem;
+}
+
+.panelVcf{
+  position: relative;
+  top: -30px;
+  left: 25rem;
+}
+
+input[type=range]{
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    width: 200px;
+}
+
+
+input[type=range]::-moz-range-track{
+    
+  width: 200px;
+  height: 16px;
+  background-color: #fff;
+}
+
+
+input[type=range]::-webkit-slider-thumb {
+
+    -webkit-appearance: none;
+
+    border: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 0%;
+    background: #6f6f6f;
+   
+}
+
+input[type=range]::-moz-range-thumb {
+  
+    -moz-appearance: none;
+
+    border: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 0%;
+    background: #6f6f6f;
+   
+}
+
+
+#keyboard{
+
+  left:60px;
+  border-left: 1rem solid #3b3b3b;
+  border-right: 1rem solid #3b3b3b;
+  border-top: 1rem solid #141414;
+  border-bottom: 1rem solid #2e2e2e;
+}
+
+#keyboard li{
+
+  border-bottom-style: : hidden !important;
+
+}
+  
+
+</style>
+
+
+
+
+
+    <div id="monotron">
+  <div id="brand">
+    <h1 id="title">Monotronic</h1>
+    <div id="description">Monophonic synthesizer</div>
+  </div>
+  <div id="controls">
+   
+    <div class="panel">
+      <h2>-VCO-</h2>
+      <div class="knobs">
+        <div class="knob">
+          <input id="pitch" type="range" min="0.4" max="20" value="0" step="0.1" value="0.4">
+          <label>Pitch</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>-LFO-</h2>
+      <div class="knobs">
+        <div class="knob">
+          <input id="rate" type="range" min="0" max="15" value="0" step="0.01" value="0">
+          <label>Rate</label>
+        </div>
+        <div class="knob">
+          <input id="int" type="range" min="0" max="10000" value="0" step="1" value="0">
+          <label>Int.</label>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="panelVcf">
+      <h2>-VCF-</h2>
+      <div class="knobs">
+        <div class="knob">
+          <input id="cutoff" type="range" min="0" max="4100" value="1110" >
+          <label>Cutoff</label>
+        </div>
+        <div class="knob">
+          <input id="peak" type="range" min="0" max="39" value="0" step="0.1" value="0">
+          <label>Peak</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="keyboard"></div>
+</div>
+  
+  
+  
+    
+
+
+   <script>
+
+     var keyboard = new QwertyHancock({
+                 id: 'keyboard',
+                 width: 594,
+                 height: 100,
+                 octaves: 2,
+                 startNote: 'A1',
+                
+                 activeColour: '#cccccc'
+            });
+
+     var switch1="";
+      var pitch=$("#pitch").val();
+      var rate=$("#rate").val();
+      var int=$("#int").val();
+      var cutoff=$("#cutoff").val();
+      var peak=$("#peak").val();
+
+
+
+class Monotron{
+
+  init(){
+
+
+
+
+            this.audioContext = new (typeof AudioContext !== "undefined" && AudioContext !== null ? AudioContext : webkitAudioContext)();
+
+
+
+           // this.AudioContext = window.AudioContext;
+           this.context= this.audioContext;
+           this.vco();
+           this.vcf();
+           this.lfo();
+           this.output();
+           this.connections();
+
+  }
+
+
+  vco(){
+
+     /* VCO */
+          this.vco =this.context.createOscillator();
+          this.vco.type = 'sawtooth';
+          this.vco.frequency.value = 10;
+          this.vco.start();
+
+          this.vcoGain=this.context.createGain();
+          this.vcoGain.value=1;
+
+
+  }
+
+
+  lfo(){
+
+      this.lfo=this.context.createOscillator();
+      this.lfo.type='sawtooth';
+      this.lfo.frequency.value=0;
+      this.lfo.start();
+
+      this.lfoGain=this.context.createGain();
+      this.lfoGain.gain.value=0;
+
+  }
+
+  vcf(){
+
+    this.vcfCutoff=this.context.createBiquadFilter();
+
+    this.vcfCutoff.type = "lowpass"; 
+    this.vcfCutoff.frequency.value = 0;
+    this.vcfCutoff.Q.value=1;
+
+
+    this.vcfPeak=this.context.createBiquadFilter();
+    this.vcfPeak.type="peaking";
+    this.vcfPeak.frequency.value=0;
+    this.vcfPeak.Q.value=3;
+    this.vcfPeak.gain.value=1;
+
+  }
+
+  output(){
+
+    /* VCA */
+          this.output = this.context.createGain();
+          this.output.gain.value = 0;
+
+  }
+
+
+  connections(){
+
+
+
+           this.lfo.connect(this.lfoGain);
+
+           this.lfoGain.connect(this.vcfCutoff.frequency);
+           // this.vco.connect(this.output);
+
+           this.vco.connect(this.vcfPeak);
+            this.vcfPeak.connect(this.vcfCutoff);
+            this.vcfCutoff.connect(this.output);
+          
+           this.output.connect(this.context.destination);
+
+
+
+
+  }
+
+
+
+  play(frequency){
+
+            this.time=this.context.currentTime;
+
+
+
+
+
+            this.lfo.frequency.value=rate;
+             console.log("rate : "+rate);
+
+            this.lfoGain.gain.value=int;
+             console.log("int : "+int);
+
+
+             this.vcfCutoff.frequency.value = cutoff;
+             console.log("cutoff : "+cutoff);
+
+              this.vcfPeak.frequency.value=cutoff;
+              console.log("peak cutoff: "+cutoff);
+
+               this.vcfPeak.gain.value=peak;
+                console.log("peak gain: "+peak);
+
+            console.log("pitch : "+pitch*frequency);
+            this.vco.frequency.setValueAtTime(frequency*pitch,this.time);
+
+
+            this.output.gain.value = 1;
+
+
+  }
+
+
+
+  stop(){
+
+     this.output.gain.value = 0;
+
+
+  }
+
+
+
+}
+
+       
+       var synth=new Monotron();
+       synth.init();
+
+
+
+
+       //////keyboard
+       
+       var isEmpty = function(obj) {
+          return Object.keys(obj).length === 0;
+        }
+
+        depressed_keys = {};
+                   
+
+                                     
+
+        keyboard.keyDown=function (note, frequency) {
+
+          synth.play(frequency);
+          depressed_keys[note] = true;
+
+          
+        };
+
+        keyboard.keyUp=function (note, _) {
+         
+
+
+         delete depressed_keys[note];
+
+          if (isEmpty(depressed_keys)) {
+            synth.stop();
+          }
+         
+        };
+                           
+   
+       
+     //////keyboard
+
+
+     ///knobs
+
+    
+
+$("#pitch").change(function(){
+
+      pitch=$("#pitch").val();
+});
+
+
+$("#rate").change(function(){
+  
+      rate=$("#rate").val();
+});
+
+
+$("#int").change(function(){
+  
+      int=$("#int").val();
+});
+
+
+$("#cutoff").change(function(){
+  
+      cutoff=$("#cutoff").val();
+});
+
+
+$("#peak").change(function(){
+  
+      peak=$("#peak").val();
+});
+
+
+$("#mod").change(function() {
+  switch1=$("#mod").val();
+});
+
+
+
+
+
+           
+      
+       
+       
+    </script>
+
+
+
+
+    
+  
+    
+</body>
+</html>
